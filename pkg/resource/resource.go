@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 const (
@@ -20,6 +21,7 @@ const (
 	KindJob                     = "Job"
 	KindPodDisruptionBudget     = "PodDisruptionBudget"
 	KindHorizontalPodAutoscaler = "HorizontalPodAutoscaler"
+	KindNetworkPolicy           = "NetworkPolicy"
 )
 
 var unstructuredConverter = runtime.DefaultUnstructuredConverter
@@ -106,6 +108,20 @@ func ObjectToHorizontalPodAutoscaler(obj runtime.Object) (*autoscalingv1.Horizon
 	}
 
 	return &hpa, nil
+}
+
+func ObjectToNetworkPolicy(obj runtime.Object) (*networkingv1.NetworkPolicy, error) {
+    u, err := toUnstructured(obj)
+    if err != nil {
+        return nil, err
+    }
+
+    var np networkingv1.NetworkPolicy
+    if err := fromUnstructured(u, &np); err != nil {
+        return nil, err
+    }
+
+    return &np, nil
 }
 
 func toUnstructured(obj runtime.Object) (map[string]interface{}, error) {

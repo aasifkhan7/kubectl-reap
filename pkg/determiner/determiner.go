@@ -138,10 +138,33 @@ func (d *determiner) DetermineDeletion(ctx context.Context, info *cliresource.In
 
 	case resource.KindHorizontalPodAutoscaler:
 		return d.determineDeletionHorizontalPodAutoscaler(ctx, info)
-
+	case resource.KindNetworkPolicy:
+        return d.determineDeletionNetworkPolicy(info)
 	default:
 		return false, fmt.Errorf("unsupported kind: %s/%s", kind, info.Name)
 	}
+}
+
+func (d *determiner) determineDeletionNetworkPolicy(info *cliresource.Info) (bool, error) {
+    np, err := resource.ObjectToNetworkPolicy(info.Object)
+    if err != nil {
+        return false, err
+    }
+
+    // Get the selector from the Network Policy
+    selector, err := metav1.LabelSelectorAsSelector(&np.Spec.PodSelector)
+    if err != nil {
+        return false, fmt.Errorf("invalid label selector (%s): %w", np.Name, err)
+    }
+
+    // Iterate over pods to check if any match the selector
+    for _, pod := range d.pods {
+        if selector.Matches(labels.Set(pod.Labels)) {
+            return false, nil // Pod matches the selector, so the Network Policy is used
+        }
+    }
+
+    return true, nil // No pods match the selector, so the Network Policy is unused
 }
 
 func (d *determiner) determineDeletionPod(info *cliresource.Info) (bool, error) {
