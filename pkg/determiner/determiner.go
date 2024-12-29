@@ -139,7 +139,7 @@ func (d *determiner) DetermineDeletion(ctx context.Context, info *cliresource.In
 	case resource.KindHorizontalPodAutoscaler:
 		return d.determineDeletionHorizontalPodAutoscaler(ctx, info)
 	case resource.KindNetworkPolicy:
-        return d.determineDeletionNetworkPolicy(info)
+		return d.determineDeletionNetworkPolicy(info)
 	default:
 		return false, fmt.Errorf("unsupported kind: %s/%s", kind, info.Name)
 	}
