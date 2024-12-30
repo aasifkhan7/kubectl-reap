@@ -754,3 +754,109 @@ func Test_determiner_determineUsedSecret(t *testing.T) {
 		})
 	}
 }
+
+func Test_determiner_determineDeletionNetworkPolicy(t *testing.T) {
+    const (
+        fakeNetworkPolicy = "fake-np"
+        fakePodLabelKey   = "app"
+        fakePodLabelValue = "nginx"
+    )
+
+    type fields struct {
+        pods []*corev1.Pod
+    }
+    type args struct {
+        info *cliresource.Info
+    }
+    tests := []struct {
+        name    string
+        fields  fields
+        args    args
+        want    bool
+        wantErr bool
+    }{
+        {
+            name: "NetworkPolicy should not be deleted when it matches a pod",
+            fields: fields{
+                pods: []*corev1.Pod{
+                    {
+                        ObjectMeta: metav1.ObjectMeta{
+                            Labels: map[string]string{
+                                fakePodLabelKey: fakePodLabelValue,
+                            },
+                        },
+                    },
+                },
+            },
+            args: args{
+                info: &cliresource.Info{
+                    Name: fakeNetworkPolicy,
+                    Object: &networkingv1.NetworkPolicy{
+                        TypeMeta: metav1.TypeMeta{
+                            Kind: resource.KindNetworkPolicy,
+                        },
+                        Spec: networkingv1.NetworkPolicySpec{
+                            PodSelector: metav1.LabelSelector{
+                                MatchLabels: map[string]string{
+                                    fakePodLabelKey: fakePodLabelValue,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            want:    false,
+            wantErr: false,
+        },
+        {
+            name: "NetworkPolicy should be deleted when it does not match any pod",
+            fields: fields{
+                pods: []*corev1.Pod{
+                    {
+                        ObjectMeta: metav1.ObjectMeta{
+                            Labels: map[string]string{
+                                fakePodLabelKey: "other",
+                            },
+                        },
+                    },
+                },
+            },
+            args: args{
+                info: &cliresource.Info{
+                    Name: fakeNetworkPolicy,
+                    Object: &networkingv1.NetworkPolicy{
+                        TypeMeta: metav1.TypeMeta{
+                            Kind: resource.KindNetworkPolicy,
+                        },
+                        Spec: networkingv1.NetworkPolicySpec{
+                            PodSelector: metav1.LabelSelector{
+                                MatchLabels: map[string]string{
+                                    fakePodLabelKey: fakePodLabelValue,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            want:    true,
+            wantErr: false,
+        },
+    }
+    for _, tt := range tests {
+        tt := tt
+        t.Run(tt.name, func(t *testing.T) {
+            t.Parallel()
+            d := &determiner{
+                pods: tt.fields.pods,
+            }
+            got, err := d.determineDeletionNetworkPolicy(tt.args.info)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("determineDeletionNetworkPolicy() error = %v, wantErr %v", err, tt.wantErr)
+                return
+            }
+            if got != tt.want {
+                t.Errorf("determineDeletionNetworkPolicy() = %v, want %v", got, tt.want)
+            }
+        })
+    }
+}
